@@ -4,6 +4,7 @@
 {-# LANGUAGE DefaultSignatures, FlexibleContexts, GADTs,
     MultiParamTypeClasses, EmptyDataDecls #-}
 #endif
+{-# LANGUAGE TypeSynonymInstances #-}
 
 ------------------------------------------------------------------------
 -- |
@@ -102,15 +103,9 @@ import Data.Functor.Identity (Identity(..))
 import GHC.Generics
 #endif
 
-#if __GLASGOW_HASKELL__ >= 710
-import Data.Typeable (typeRepFingerprint)
+import Type.Reflection (SomeTypeRep(..), typeRepFingerprint)
+import Data.Typeable (TypeRep)
 import GHC.Fingerprint.Type(Fingerprint(..))
-#elif __GLASGOW_HASKELL__ >= 702
-import Data.Typeable.Internal (TypeRep (..))
-import GHC.Fingerprint.Type(Fingerprint(..))
-#elif __GLASGOW_HASKELL__ >= 606
-import Data.Typeable (typeRepKey)
-#endif
 
 #if __GLASGOW_HASKELL__ >= 703
 import Foreign.C (CLong(..))
@@ -644,17 +639,8 @@ instance Hashable WordPtr where
 -- | Compute the hash of a TypeRep, in various GHC versions we can do this quickly.
 hashTypeRep :: TypeRep -> Int
 {-# INLINE hashTypeRep #-}
-#if __GLASGOW_HASKELL__ >= 710
 -- Fingerprint is just the MD5, so taking any Int from it is fine
-hashTypeRep tr = let Fingerprint x _ = typeRepFingerprint tr in fromIntegral x
-#elif __GLASGOW_HASKELL__ >= 702
--- Fingerprint is just the MD5, so taking any Int from it is fine
-hashTypeRep (TypeRep (Fingerprint x _) _ _) = fromIntegral x
-#elif __GLASGOW_HASKELL__ >= 606
-hashTypeRep = B.inlinePerformIO . typeRepKey
-#else
-hashTypeRep = hash . show
-#endif
+hashTypeRep (SomeTypeRep tr) = let Fingerprint x _ = typeRepFingerprint tr in fromIntegral x
 
 instance Hashable TypeRep where
     hash = hashTypeRep
